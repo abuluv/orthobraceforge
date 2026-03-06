@@ -1,0 +1,112 @@
+%%{ init: { 'theme': 'dark' } }%%
+flowchart TB
+    subgraph GUI["PyQt6 GUI Layer"]
+        direction LR
+        PI[Patient Intake Screen]
+        CS[Condition Selector Screen]
+        PV[3D Preview Screen<br/>PyVista Embedded]
+        GP[Generation Progress<br/>+ Agent Trace Log]
+        CR[Compliance Report Screen]
+        EX[Export / Print Queue]
+    end
+
+    subgraph ORCH["LangGraph Orchestration Engine"]
+        direction TB
+        SM[State Machine<br/>LangGraph Graph]
+        NLP[NL Parser + Form Normalizer]
+        RAG[Domain RAG Engine<br/>FDA / ISO 13485 /<br/>Biocompatibility KB]
+        HRG[Human Review Gates]
+    end
+
+    subgraph AGENTS["Agentic CAD Pipeline"]
+        direction TB
+        A3D["agentic3d<br/>(Autogen OpenSCAD<br/>agent loop)"]
+        FAI["forma-ai-service<br/>(build123d self-correction)"]
+        TC["talkcad<br/>(Conversational orchestrator<br/>+ preview)"]
+        CA["cad-agent<br/>(Headless render server)"]
+        CTS["Chat-To-STL<br/>(Fallback generator)"]
+    end
+
+    subgraph VALIDATION["Validation & Analysis"]
+        direction TB
+        VLM[VLM Render-Critique<br/>Iterative Loop]
+        FEA[FEA Stress Analysis<br/>Pediatric Load Profiles]
+        LAT["agentic-alloy<br/>(Ti Lattice Reinforcement<br/>Evaluation)"]
+        OI["ortho-insoles-adapted<br/>(AFO Parametric Prediction<br/>from Scan)"]
+    end
+
+    subgraph PRINT["Additive Manufacturing"]
+        direction TB
+        L3D["llm-3d-print<br/>(Defect Monitoring<br/>& Correction)"]
+        MCP["octo-mcp<br/>(Printer State/Control<br/>MCP Broker)"]
+        PSL[Print Slicer Interface]
+    end
+
+    subgraph DATA["Persistence Layer"]
+        direction LR
+        SQL[(SQLite DB<br/>Patient Cases<br/>Audit Logs)]
+        FS[File Store<br/>STL / STEP / OBJ<br/>Scan Data]
+        PDF[Audit PDF<br/>Generator]
+    end
+
+    %% GUI → Orchestration
+    PI -->|Patient data + scans| NLP
+    CS -->|Clinical parameters| NLP
+    NLP --> SM
+    SM --> RAG
+
+    %% Orchestration → Agents
+    SM -->|"Generate CAD<br/>(build123d preferred)"| FAI
+    SM -->|"OpenSCAD fallback"| A3D
+    SM -->|"Conversational refine"| TC
+    SM -->|"Fallback STL gen"| CTS
+    FAI --> CA
+    A3D --> CA
+    TC --> CA
+    CTS --> CA
+
+    %% Orchestration → Validation
+    CA -->|"Rendered views"| VLM
+    VLM -->|"Critique feedback"| SM
+    SM --> FEA
+    SM --> LAT
+    SM --> OI
+
+    %% Validation → Human Gates
+    FEA --> HRG
+    LAT --> HRG
+    OI --> HRG
+    VLM --> HRG
+    HRG -->|"Approved"| SM
+
+    %% Preview
+    CA -->|"Mesh data"| PV
+    SM -->|"Agent trace"| GP
+
+    %% Export / Print
+    SM -->|"Final STL/STEP"| EX
+    EX --> PSL
+    PSL --> MCP
+    MCP --> L3D
+    L3D -->|"Corrections"| MCP
+
+    %% Persistence
+    SM --> SQL
+    SM --> FS
+    HRG --> PDF
+    PDF --> CR
+
+    %% Styling
+    classDef guiNode fill:#1a1a2e,stroke:#e94560,stroke-width:2px,color:#eee
+    classDef orchNode fill:#16213e,stroke:#0f3460,stroke-width:2px,color:#eee
+    classDef agentNode fill:#0f3460,stroke:#533483,stroke-width:2px,color:#eee
+    classDef valNode fill:#1a1a2e,stroke:#e94560,stroke-width:2px,color:#eee
+    classDef printNode fill:#16213e,stroke:#53a653,stroke-width:2px,color:#eee
+    classDef dataNode fill:#1a1a2e,stroke:#f5a623,stroke-width:2px,color:#eee
+
+    class PI,CS,PV,GP,CR,EX guiNode
+    class SM,NLP,RAG,HRG orchNode
+    class A3D,FAI,TC,CA,CTS agentNode
+    class VLM,FEA,LAT,OI valNode
+    class L3D,MCP,PSL printNode
+    class SQL,FS,PDF dataNode
