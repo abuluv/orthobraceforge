@@ -1,0 +1,29 @@
+[
+  {
+    "id": "mat_001",
+    "title": "PETG for Pediatric AFOs",
+    "content": "PETG (Polyethylene Terephthalate Glycol-modified) is the most widely used FDM material for 3D-printed pediatric AFOs. Properties: tensile strength 50 MPa, flexural modulus 2100 MPa, elongation at break 23%. Print parameters: 240\u00b0C nozzle, 80\u00b0C bed, 0.2mm layer height, 80% infill for structural regions, 100% infill for ankle hinge zones.",
+    "section": "FDM Materials",
+    "keywords": [
+      "petg",
+      "fdm",
+      "print_parameters",
+      "mechanical_properties"
+    ],
+    "severity": "informational"
+  },
+  {
+    "id": "mat_002",
+    "title": "Titanium Lattice Reinforcement for Severe Equinus",
+    "content": "Ti-6Al-4V DMLS lattice inserts may be used as reinforcement ribs in severe equinus AFOs where polymer-only construction is insufficient. BCC lattice structure with 60% relative density provides optimal stiffness-to-weight ratio. Insert must be bonded with medical-grade epoxy (ISO 10993 certified) and edges fully encapsulated in polymer.",
+    "section": "Metal Reinforcement",
+    "keywords": [
+      "titanium",
+      "lattice",
+      "dmls",
+      "reinforcement",
+      "severe_equinus"
+    ],
+    "severity": "major"
+  }
+]
