@@ -230,3 +230,10 @@ HUMAN_REVIEW_REQUIRED = True           # NEVER set False in production
 PREFERRED_CAD_ENGINE = "build123d"     # "build123d" | "openscad" | "chat_to_stl"
 LOCAL_LLM_MODEL = "llama3.2"           # Assumed local via Ollama or similar
 EMBEDDING_MODEL = "all-MiniLM-L6-v2"  # Sentence-transformers for RAG
+
+# ---------------------------------------------------------------------------
+# Logging configuration
+# ---------------------------------------------------------------------------
+LOG_MAX_BYTES = 5 * 1024 * 1024  # 5 MB per log file
+LOG_BACKUP_COUNT = 5
+JSON_LOGGING_ENABLED = False

@@ -13,6 +13,8 @@ from typing import Dict, Any, Optional, List, Tuple
 from dataclasses import dataclass, field
 from abc import ABC, abstractmethod
 
+from datetime import datetime, timezone
+
 from config import (
     BASE_DIR, EXPORT_DIR, PREFERRED_CAD_ENGINE,
     MAX_AGENT_ITERATIONS, VLM_CRITIQUE_MAX_ROUNDS,
@@ -20,6 +22,10 @@ from config import (
     OPENSCAD_TIMEOUT_SEC, BUILD123D_TIMEOUT_SEC, OCTOPRINT_CONNECT_TIMEOUT_SEC,
     AFO_LENGTH_MIN_MM, AFO_LENGTH_MAX_MM, AFO_HEIGHT_MIN_MM, AFO_HEIGHT_MAX_MM,
     OCTOPRINT_URL, OCTOPRINT_API_KEY,
+)
+from exceptions import (
+    OrthoError, CADGenerationError, PrinterConnectionError,
+    MeasurementValidationError,
 )
 
 logger = logging.getLogger("orthobraceforge.agents")
@@ -52,6 +58,22 @@ class BaseAgent(ABC):
         entry = f"[{self.name}] {msg}"
         self._trace.append(entry)
         logger.info(entry)
+
+    def run(self, params: Dict[str, Any]) -> AgentResult:
+        """Wrapper around execute() that logs start/end with timing."""
+        start = datetime.now(timezone.utc)
+        run_id = params.get("run_id", "")
+        patient_id = params.get("patient_id", "")
+        self._log(f"START execute | run_id={run_id} patient_id={patient_id}")
+        try:
+            result = self.execute(params)
+        except Exception as e:
+            elapsed = (datetime.now(timezone.utc) - start).total_seconds()
+            self._log(f"FAILED execute | error={e} elapsed={elapsed:.2f}s")
+            raise
+        elapsed = (datetime.now(timezone.utc) - start).total_seconds()
+        self._log(f"END execute | success={result.success} elapsed={elapsed:.2f}s")
+        return result
 
     @abstractmethod
     def execute(self, params: Dict[str, Any]) -> AgentResult:
@@ -120,9 +142,12 @@ class Agentic3DAgent(BaseAgent):
                     errors.append("OpenSCAD render failed — non-manifold geometry")
                     self._log("Render failed, retrying")
 
-            except Exception as e:
+            except (CADGenerationError, subprocess.SubprocessError, OSError) as e:
                 errors.append(str(e))
-                self._log(f"Exception: {e}")
+                self._log(f"CAD error: {e}")
+            except Exception as e:
+                logger.error(f"[{self.name}] Unexpected error in iteration {iteration}: {e}", exc_info=True)
+                errors.append(str(e))
 
         return AgentResult(
             success=False,
@@ -280,7 +305,7 @@ union() {
             # external render
             Path(scad_path).write_text(scad_code, encoding="utf-8")
             return False
-        except Exception as e:
+        except (subprocess.SubprocessError, OSError) as e:
             self._log(f"Render error: {e}")
             return False
 
@@ -350,9 +375,12 @@ class FormaAIAgent(BaseAgent):
                     errors = exec_result.get("errors", ["Execution failed"])
                     self._log(f"Execution failed: {errors}")
 
-            except Exception as e:
+            except (CADGenerationError, subprocess.SubprocessError, OSError) as e:
                 errors = [str(e)]
-                self._log(f"Exception: {e}")
+                self._log(f"CAD error: {e}")
+            except Exception as e:
+                logger.error(f"[{self.name}] Unexpected error in iteration {iteration}: {e}", exc_info=True)
+                errors = [str(e)]
 
         return AgentResult(
             success=False,
@@ -492,7 +520,7 @@ print("BUILD123D_SUCCESS: AFO exported to STL and STEP")
             }
         except subprocess.TimeoutExpired:
             return {"success": False, "errors": ["Build123d execution timed out (180s)"]}
-        except Exception as e:
+        except OSError as e:
             return {"success": False, "errors": [str(e)]}
 
     def _validate_geometry(self, stl_path: str, constraints: Dict) -> Dict:
@@ -523,7 +551,7 @@ print("BUILD123D_SUCCESS: AFO exported to STL and STEP")
             }
         except ImportError:
             return {"valid": True, "errors": [], "note": "trimesh not available for validation"}
-        except Exception as e:
+        except (OSError, ValueError) as e:
             return {"valid": False, "errors": [str(e)]}
 
 
@@ -678,7 +706,7 @@ class CADRenderAgent(BaseAgent):
             plotter.screenshot(output_path)
             plotter.close()
             return Path(output_path).exists()
-        except Exception as e:
+        except (ImportError, OSError) as e:
             self._log(f"Render error: {e}")
             return False
 
@@ -814,7 +842,7 @@ class OrthoInsolesAgent(BaseAgent):
                 "foot_height_mm": round(dims[2], 1),
                 "scan_volume_cm3": round(mesh.volume / 1000, 1),
             }
-        except Exception as e:
+        except (ImportError, OSError, ValueError) as e:
             self._log(f"Scan extraction error: {e}")
             return {}
 
@@ -849,6 +877,12 @@ class OctoMCPAgent(BaseAgent):
         super().__init__("octo_mcp")
         self._printer_url = os.environ.get("OCTOPRINT_URL", OCTOPRINT_URL)
         self._api_key = os.environ.get("OCTOPRINT_API_KEY", OCTOPRINT_API_KEY)
+        if not self._api_key:
+            try:
+                import keyring
+                self._api_key = keyring.get_password("orthobraceforge", "octoprint_api_key") or ""
+            except ImportError:
+                pass
 
     def execute(self, params: Dict[str, Any]) -> AgentResult:
         self._trace = []
@@ -912,7 +946,7 @@ class OctoMCPAgent(BaseAgent):
         except ValueError as e:
             self._log(f"Printer config error: {e}")
             return {"state": "unconfigured", "error": str(e)}
-        except Exception as e:
+        except (OSError, TimeoutError) as e:
             self._log(f"Printer status error: {e}")
             return {"state": "offline", "error": str(e)}
 
@@ -928,6 +962,7 @@ class OctoMCPAgent(BaseAgent):
         try:
             gcode_file.relative_to(EXPORT_DIR.resolve())
         except ValueError:
+            logger.warning(f"[{self.name}] Security: gcode_path outside EXPORT_DIR: {gcode_path}")
             self._log(f"Security: gcode_path outside EXPORT_DIR: {gcode_path}")
             return False
 
@@ -962,7 +997,7 @@ class OctoMCPAgent(BaseAgent):
         except urllib.error.HTTPError as e:
             self._log(f"Upload HTTP error {e.code}: {e.reason}")
             return False
-        except Exception as e:
+        except (urllib.error.URLError, OSError, TimeoutError) as e:
             self._log(f"Upload error: {e}")
             return False
 
@@ -994,7 +1029,7 @@ class OctoMCPAgent(BaseAgent):
         except urllib.error.HTTPError as e:
             self._log(f"Print-start HTTP error {e.code}: {e.reason}")
             return False
-        except Exception as e:
+        except (urllib.error.URLError, OSError, TimeoutError) as e:
             self._log(f"Print-start error: {e}")
             return False
 
@@ -1104,7 +1139,7 @@ class ChatToSTLAgent(BaseAgent):
                 iterations_used=1,
                 trace_log=list(self._trace),
             )
-        except Exception as e:
+        except OSError as e:
             return AgentResult(
                 success=False, agent_name=self.name,
                 errors=[f"Fallback generation failed: {e}"],

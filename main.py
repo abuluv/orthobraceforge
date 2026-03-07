@@ -10,7 +10,9 @@ Launch sequence:
 """
 import sys
 import os
+import json
 import logging
+import logging.handlers
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
@@ -20,17 +22,46 @@ if getattr(sys, "frozen", False):
     os.environ["QT_PLUGIN_PATH"] = str(Path(sys._MEIPASS) / "PyQt6" / "Qt6" / "plugins")
 
 
+class JsonFormatter(logging.Formatter):
+    """Structured JSON log formatter for audit trail integration."""
+
+    def format(self, record):
+        log_entry = {
+            "timestamp": self.formatTime(record),
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage(),
+        }
+        if record.exc_info and record.exc_info[0]:
+            log_entry["exception"] = self.formatException(record.exc_info)
+        return json.dumps(log_entry)
+
+
 def setup_logging():
+    from config import LOG_MAX_BYTES, LOG_BACKUP_COUNT, JSON_LOGGING_ENABLED
+
     log_dir = Path(os.environ.get("APPDATA", Path.home())) / "OrthoBraceForge" / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
-        handlers=[
-            logging.FileHandler(log_dir / "orthobraceforge.log", encoding="utf-8"),
-            logging.StreamHandler(sys.stdout),
-        ],
+
+    root = logging.getLogger()
+    root.setLevel(logging.INFO)
+
+    plain_fmt = logging.Formatter("%(asctime)s [%(name)s] %(levelname)s: %(message)s")
+
+    # Rotating file handler
+    file_handler = logging.handlers.RotatingFileHandler(
+        log_dir / "orthobraceforge.log",
+        maxBytes=LOG_MAX_BYTES,
+        backupCount=LOG_BACKUP_COUNT,
+        encoding="utf-8",
     )
+    file_handler.setFormatter(JsonFormatter() if JSON_LOGGING_ENABLED else plain_fmt)
+    root.addHandler(file_handler)
+
+    # Console handler (always plain text for readability)
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setFormatter(plain_fmt)
+    root.addHandler(console_handler)
 
 
 def main():
@@ -69,7 +100,7 @@ def main():
     app.processEvents()
 
     # --- Regulatory Acknowledgment (first run) ---
-    from config import DB_PATH, REGULATORY_BANNER
+    from config import DB_PATH, REGULATORY_BANNER, OCTOPRINT_API_KEY
     first_run = not DB_PATH.exists()
 
     # --- Initialize Core Systems ---
@@ -81,6 +112,9 @@ def main():
         db = Database()
         orchestrator = OrchoBraceOrchestrator(db=db)
         logger.info("Database and orchestrator initialized")
+
+        if not os.environ.get("OCTOPRINT_API_KEY") and not OCTOPRINT_API_KEY:
+            logger.warning("OctoPrint API key is not configured. Printer features will be unavailable.")
     except Exception as e:
         logger.exception("Fatal initialization error")
         splash.close()

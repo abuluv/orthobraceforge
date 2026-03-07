@@ -216,6 +216,7 @@ class PipelineWorker(QThread):
     human_review_needed = pyqtSignal(dict)
     pipeline_complete = pyqtSignal(dict)
     pipeline_error = pyqtSignal(str)
+    error_occurred = pyqtSignal(str)
 
     def __init__(self, orchestrator, patient_data, preset_key,
                  scan_path=None, skip_print=True):
@@ -233,6 +234,7 @@ class PipelineWorker(QThread):
                 on_phase_change=lambda p, s: self.phase_changed.emit(p, s),
                 on_trace_update=lambda m: self.trace_update.emit(m),
                 on_human_review_needed=lambda s: self.human_review_needed.emit(s),
+                on_error=lambda m: self.error_occurred.emit(m),
             )
             self._state = self.orchestrator.run_pipeline(
                 self.patient_data, self.preset_key,
@@ -1094,6 +1096,7 @@ class MainWindow(QMainWindow):
         self._pipeline_worker.human_review_needed.connect(self._on_human_review)
         self._pipeline_worker.pipeline_complete.connect(self._on_pipeline_complete)
         self._pipeline_worker.pipeline_error.connect(self._on_pipeline_error)
+        self._pipeline_worker.error_occurred.connect(self._on_agent_error)
         self._pipeline_worker.start()
 
     def _on_phase_changed(self, phase: str, state: dict):
@@ -1151,6 +1154,10 @@ class MainWindow(QMainWindow):
     def _on_pipeline_error(self, error: str):
         QMessageBox.critical(self, "Pipeline Error", f"An error occurred:\n\n{error}")
         self.statusBar().showMessage(f"Error: {error}")
+
+    def _on_agent_error(self, error: str):
+        self.statusBar().setStyleSheet("QStatusBar { color: #e94560; }")
+        self.statusBar().showMessage(f"Warning: {error}")
 
     def _on_export(self, format_type: str):
         """Handle export button clicks."""
