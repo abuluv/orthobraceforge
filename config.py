@@ -201,6 +201,27 @@ class FEADefaults:
 FEA_DEFAULTS = FEADefaults()
 
 # ---------------------------------------------------------------------------
+# Agent subprocess timeouts (seconds)
+# ---------------------------------------------------------------------------
+OPENSCAD_TIMEOUT_SEC = 120
+BUILD123D_TIMEOUT_SEC = 180
+OCTOPRINT_CONNECT_TIMEOUT_SEC = 5
+
+# ---------------------------------------------------------------------------
+# AFO geometry validation bounds (millimetres)
+# ---------------------------------------------------------------------------
+AFO_LENGTH_MIN_MM = 100
+AFO_LENGTH_MAX_MM = 400
+AFO_HEIGHT_MIN_MM = 80
+AFO_HEIGHT_MAX_MM = 350
+
+# ---------------------------------------------------------------------------
+# OctoPrint connection settings
+# ---------------------------------------------------------------------------
+OCTOPRINT_URL = "http://localhost:5000"   # Override with OCTOPRINT_URL env var
+OCTOPRINT_API_KEY = ""                    # Override with OCTOPRINT_API_KEY env var
+
+# ---------------------------------------------------------------------------
 # Agent orchestration settings
 # ---------------------------------------------------------------------------
 MAX_AGENT_ITERATIONS = 10
