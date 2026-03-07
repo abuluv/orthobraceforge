@@ -1,0 +1,43 @@
+[
+  {
+    "id": "iso_001",
+    "title": "ISO 13485:2016 \u00a77.3 \u2014 Design and Development",
+    "content": "Design and development planning shall include: design stages, review/verification/validation activities at each stage, responsibilities, and methods to ensure traceability. For software-generated medical device designs, IEC 62304 software lifecycle processes apply.",
+    "section": "Design and Development",
+    "keywords": [
+      "iso13485",
+      "design",
+      "development",
+      "planning",
+      "iec62304"
+    ],
+    "severity": "critical"
+  },
+  {
+    "id": "iso_002",
+    "title": "ISO 13485:2016 \u00a74.2.5 \u2014 Control of Records",
+    "content": "Records shall be maintained to provide evidence of conformity. For CAD-generated AFOs: complete parameter history, agent decision logs, all iteration snapshots, human review decisions with timestamps, and file integrity hashes (SHA-256) for all exported STL/STEP files.",
+    "section": "Document Control",
+    "keywords": [
+      "records",
+      "traceability",
+      "audit",
+      "hash",
+      "document_control"
+    ],
+    "severity": "major"
+  },
+  {
+    "id": "iso_003",
+    "title": "ISO 13485:2016 \u00a78.2.1 \u2014 Feedback and Complaints",
+    "content": "Post-market surveillance processes must capture: device fit issues, skin reactions, mechanical failures, patient complaints. For pediatric AFOs, 30-day follow-up assessments are recommended to capture growth-related fit issues and gait improvement metrics.",
+    "section": "Post-Market Surveillance",
+    "keywords": [
+      "feedback",
+      "complaints",
+      "surveillance",
+      "follow_up"
+    ],
+    "severity": "major"
+  }
+]

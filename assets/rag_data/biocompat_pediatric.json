@@ -1,0 +1,29 @@
+[
+  {
+    "id": "bio_001",
+    "title": "ISO 10993-1 \u2014 Biological Evaluation of Medical Devices",
+    "content": "AFOs are surface-contacting devices with prolonged skin exposure (>30 days). Required biocompatibility tests for pediatric use: cytotoxicity (ISO 10993-5), sensitization (ISO 10993-10), irritation (ISO 10993-10), and material characterization (ISO 10993-18). Pediatric skin is more permeable and sensitive \u2014 additional irritation margins are required.",
+    "section": "Biocompatibility",
+    "keywords": [
+      "biocompatibility",
+      "skin_contact",
+      "cytotoxicity",
+      "pediatric"
+    ],
+    "severity": "critical"
+  },
+  {
+    "id": "bio_002",
+    "title": "3D-Printed Material Biocompatibility",
+    "content": "Post-printing biocompatibility depends on: residual monomer content, surface roughness (Ra < 12.5 \u00b5m for skin contact), extractables/leachables from layer interfaces, and support material removal completeness. PETG and PA12 are generally recognized as biocompatible for skin-contact orthoses when properly processed.",
+    "section": "Material Processing",
+    "keywords": [
+      "3d_print",
+      "surface_roughness",
+      "extractables",
+      "petg",
+      "pa12"
+    ],
+    "severity": "major"
+  }
+]

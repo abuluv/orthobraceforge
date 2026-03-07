@@ -1,0 +1,57 @@
+[
+  {
+    "id": "fda_001",
+    "title": "21 CFR 890.3475 \u2014 Limb Orthosis Classification",
+    "content": "Ankle-foot orthoses (AFOs) are classified as Class I or Class II medical devices under 21 CFR 890.3475. Custom 3D-printed AFOs for pediatric use typically require 510(k) clearance as Class II devices. Predicate devices include traditionally manufactured polypropylene AFOs. The device must demonstrate substantial equivalence in intended use, technological characteristics, and performance.",
+    "section": "Device Classification",
+    "keywords": [
+      "fda",
+      "510k",
+      "class_ii",
+      "afo",
+      "orthosis",
+      "clearance"
+    ],
+    "severity": "critical"
+  },
+  {
+    "id": "fda_002",
+    "title": "Pediatric-Specific FDA Requirements",
+    "content": "Pediatric medical devices must comply with the Pediatric Medical Device Safety and Improvement Act. For AFOs in children ages 2-12: growth accommodation must be documented, materials must meet ISO 10993 for prolonged skin contact in pediatric populations, and mechanical testing must use pediatric-appropriate loading profiles (typically 1.5x body weight dynamic loading with safety factor >= 3.0).",
+    "section": "Pediatric Requirements",
+    "keywords": [
+      "pediatric",
+      "children",
+      "growth",
+      "safety_factor",
+      "loading"
+    ],
+    "severity": "critical"
+  },
+  {
+    "id": "fda_003",
+    "title": "3D-Printed Device Technical Considerations",
+    "content": "FDA guidance 'Technical Considerations for Additive Manufactured Medical Devices' (2017) requires: documentation of build orientation effects on mechanical properties, post-processing validation (annealing, surface finishing), layer adhesion strength testing, dimensional accuracy verification (\u00b10.5mm for AFOs), and biocompatibility of the final finished device including any support material residue.",
+    "section": "Additive Manufacturing",
+    "keywords": [
+      "3d_print",
+      "additive",
+      "build_orientation",
+      "layer_adhesion"
+    ],
+    "severity": "critical"
+  },
+  {
+    "id": "fda_004",
+    "title": "Design Controls \u2014 21 CFR 820.30",
+    "content": "All medical device design activities must follow design controls: design input (patient measurements, clinical requirements), design output (CAD files, STL, manufacturing instructions), design review (human clinician approval gate), design verification (FEA, dimensional check), design validation (fit testing on patient), and design transfer (print parameters, QC checklist). All records must be maintained.",
+    "section": "Design Controls",
+    "keywords": [
+      "design_controls",
+      "verification",
+      "validation",
+      "qms"
+    ],
+    "severity": "critical"
+  }
+]

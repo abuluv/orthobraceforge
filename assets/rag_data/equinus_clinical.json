@@ -1,0 +1,43 @@
+[
+  {
+    "id": "clin_001",
+    "title": "Idiopathic Toe Walking \u2014 Clinical Parameters",
+    "content": "Idiopathic toe walking (ITW) is defined as persistent toe-toe gait pattern beyond age 3 without neurological, orthopedic, or developmental cause. Prevalence: 5-12% of children. Classification: mild (occasional, can heel-walk on command, DF \u2265 5\u00b0), moderate (frequent, limited heel-walk, DF 0-5\u00b0), severe/fixed equinus (constant, unable to heel-walk, DF < 0\u00b0). AFO management is first-line for moderate-severe ITW.",
+    "section": "Diagnosis",
+    "keywords": [
+      "toe_walking",
+      "equinus",
+      "idiopathic",
+      "classification",
+      "afo"
+    ],
+    "severity": "informational"
+  },
+  {
+    "id": "clin_002",
+    "title": "AFO Design Principles for Toe Walking Correction",
+    "content": "AFO design goals for ITW correction: 1) Maintain ankle in neutral-to-slight-dorsiflexion during stance, 2) Prevent forefoot-first contact at initial contact, 3) Allow controlled plantarflexion if hinged design, 4) Accommodate growth (recommend 6-month replacement cycle for ages 2-6, 12-month for ages 7-12), 5) Trim lines must clear malleoli by \u2265 3mm, 6) Posterior wall must extend to fibular head minus 15mm for lever arm.",
+    "section": "AFO Design",
+    "keywords": [
+      "afo_design",
+      "dorsiflexion",
+      "trim_line",
+      "correction",
+      "lever_arm"
+    ],
+    "severity": "critical"
+  },
+  {
+    "id": "clin_003",
+    "title": "Pediatric AFO Dimensional Tolerances",
+    "content": "Critical dimensions for pediatric AFOs: ankle angle \u00b11\u00b0, foot length \u00b11.5mm, ankle width \u00b11.0mm, posterior wall height \u00b12.0mm, trim line clearance minimum 3mm from bony prominences. Wall thickness uniformity \u00b10.3mm. These tolerances must be verified before human approval gate.",
+    "section": "Dimensional Requirements",
+    "keywords": [
+      "tolerances",
+      "dimensions",
+      "ankle_angle",
+      "wall_thickness"
+    ],
+    "severity": "critical"
+  }
+]
