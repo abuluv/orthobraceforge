@@ -71,7 +71,7 @@ class Database:
 
     def __init__(self, db_path: Path = DB_PATH):
         self.db_path = db_path
-        self._conn = None
+        self._conn: Optional[sqlite3.Connection] = None
         self._init_db()
 
     def _get_conn(self) -> sqlite3.Connection:

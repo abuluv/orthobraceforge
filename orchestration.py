@@ -712,11 +712,11 @@ class OrchoBraceOrchestrator:
         self._emit_phase(state, Phase.EXPORT)
         self._emit_trace(state, "Exporting design files and audit report")
 
-        export_paths = []
+        export_paths: List[str] = []
         if state.get("stl_path"):
-            export_paths.append(state["stl_path"])
+            export_paths.append(state["stl_path"])  # type: ignore[arg-type]
         if state.get("step_path"):
-            export_paths.append(state["step_path"])
+            export_paths.append(state["step_path"])  # type: ignore[arg-type]
 
         state["export_paths"] = export_paths
 
@@ -727,7 +727,7 @@ class OrchoBraceOrchestrator:
             pdf_path = pdf_gen.generate(
                 patient_id=state["patient_id"],
                 design_id=state["design_id"],
-                state=state,
+                state=dict(state),  # type: ignore[arg-type]
             )
             state["audit_pdf_path"] = pdf_path
             export_paths.append(pdf_path)

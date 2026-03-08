@@ -40,7 +40,7 @@ class Agentic3DAgent(BaseAgent):
         output_stl = str(EXPORT_DIR / f"agentic3d_{params.get('design_id', 'temp')}.stl")
         output_scad = str(EXPORT_DIR / f"agentic3d_{params.get('design_id', 'temp')}.scad")
 
-        errors = []
+        errors: List[str] = []
         scad_code = None
 
         for iteration in range(1, max_iter + 1):

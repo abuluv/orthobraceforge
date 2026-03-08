@@ -1,4 +1,4 @@
-.PHONY: test lint coverage install install-dev clean
+.PHONY: test lint typecheck coverage install install-dev clean
 
 install:
 	pip install -r requirements.txt
@@ -15,6 +15,9 @@ lint:
 
 lint-fix:
 	ruff check --fix .
+
+typecheck:
+	python -m mypy orchestration.py agents/base.py compliance_rag.py database.py config.py --ignore-missing-imports
 
 coverage:
 	python -m pytest --cov=. --cov-report=term-missing --cov-fail-under=70

@@ -12,7 +12,7 @@ from typing import Dict
 # Path resolution (works both in dev and PyInstaller frozen mode)
 # ---------------------------------------------------------------------------
 if getattr(sys, "frozen", False):
-    BASE_DIR = Path(sys._MEIPASS)
+    BASE_DIR = Path(sys._MEIPASS)  # type: ignore[attr-defined]
     USER_DATA = Path(os.environ.get("APPDATA", "~")) / "OrthoBraceForge"
 else:
     BASE_DIR = Path(__file__).resolve().parent

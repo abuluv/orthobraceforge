@@ -358,11 +358,11 @@ class ComplianceRAG:
             # Compute keyword overlap score
             doc_tokens = set(w.lower() for w in doc.keywords)
             doc_tokens.update(w.lower() for w in doc.title.split())
-            overlap = len(query_tokens & doc_tokens)
+            overlap: float = len(query_tokens & doc_tokens)
             if overlap == 0:
                 # Check content for partial matches
                 content_lower = doc.content.lower()
-                overlap = sum(1 for t in query_tokens if t in content_lower) * 0.5
+                overlap = float(sum(1 for t in query_tokens if t in content_lower)) * 0.5
             if overlap > 0:
                 severity_weight = self._severity_weights.get(doc.severity, 1.0)
                 score = overlap * severity_weight
@@ -484,7 +484,7 @@ class ComplianceRAG:
         if not preset:
             return {"error": f"Unknown preset: {preset_key}"}
 
-        anthro = PEDIATRIC_ANTHRO.get(age, PEDIATRIC_ANTHRO.get(6))  # default to age 6
+        anthro = PEDIATRIC_ANTHRO.get(age) or PEDIATRIC_ANTHRO.get(6) or (165, 200, 46, 58)
 
         dynamic_load_n = weight_kg * 9.81 * FEA_DEFAULTS.body_weight_multiplier
 

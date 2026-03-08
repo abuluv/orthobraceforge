@@ -47,7 +47,7 @@ class FormaAIAgent(BaseAgent):
         output_step = str(EXPORT_DIR / f"forma_{design_id}.step")
         output_py = str(EXPORT_DIR / f"forma_{design_id}_build123d.py")
 
-        errors = []
+        errors: List[str] = []
         b123d_code = None
 
         for iteration in range(1, max_iter + 1):
@@ -55,7 +55,7 @@ class FormaAIAgent(BaseAgent):
 
             try:
                 # Generate build123d Python code
-                b123d_code = self._generate_build123d(constraints, b123d_code, errors)
+                b123d_code = self._generate_build123d(constraints, b123d_code, errors, output_stl, output_step)
                 self._log(f"Generated build123d code ({len(b123d_code)} chars)")
 
                 # Write and execute
@@ -102,7 +102,7 @@ class FormaAIAgent(BaseAgent):
         )
 
     def _generate_build123d(self, constraints: Dict, previous_code: Optional[str],
-                             errors: List[str]) -> str:
+                             errors: List[str], stl_path: str = "", step_path: str = "") -> str:
         """
         Generate build123d Python code for AFO.
         In production: local LLM generates code; here returns parametric template.
@@ -204,8 +204,8 @@ afo_assembly = Compound(children=[
 ])
 
 # === Export ===
-afo_assembly.export_stl("{output_stl}")
-afo_assembly.export_step("{output_step}")
+afo_assembly.export_stl("{stl_path}")
+afo_assembly.export_step("{step_path}")
 print("BUILD123D_SUCCESS: AFO exported to STL and STEP")
 '''
 
