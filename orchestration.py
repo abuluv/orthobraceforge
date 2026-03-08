@@ -17,31 +17,34 @@ State machine phases:
   11. PRINT        → Optional MCP print queue + monitoring
 """
 import json
-import uuid
 import logging
-from typing import Dict, Any, Optional, List, TypedDict, Annotated
-from enum import Enum
+import uuid
 from datetime import datetime, timezone
+from enum import Enum
+from typing import Any, Dict, List, Optional, TypedDict
 
-from config import (
-    PREFERRED_CAD_ENGINE, HUMAN_REVIEW_REQUIRED,
-    MAX_AGENT_ITERATIONS, TOE_WALKING_PRESETS, EXPORT_DIR,
-)
 from agents import (
-    AgentResult,
     Agentic3DAgent,
-    FormaAIAgent,
-    TalkCADAgent,
-    CADRenderAgent,
-    PrintDefectAgent,
-    OrthoInsolesAgent,
-    OctoMCPAgent,
     AgenticAlloyAgent,
+    CADRenderAgent,
     ChatToSTLAgent,
+    FormaAIAgent,
+    OctoMCPAgent,
+    OrthoInsolesAgent,
+    PrintDefectAgent,
+    TalkCADAgent,
     VLMCritiqueAgent,
 )
 from compliance_rag import ComplianceRAG
-from database import Database, PatientRecord, DesignRecord, AuditEntry
+from config import (
+    HUMAN_REVIEW_REQUIRED,
+    MAX_AGENT_ITERATIONS,
+    PEDIATRIC_ANTHRO,
+    PREFERRED_CAD_ENGINE,
+    TOE_WALKING_PRESETS,
+)
+from database import Database, DesignRecord, PatientRecord
+from exceptions import OrthoError
 
 logger = logging.getLogger("orthobraceforge.orchestration")
 
@@ -156,13 +159,15 @@ class OrchoBraceOrchestrator:
         self._on_phase_change = None
         self._on_trace_update = None
         self._on_human_review_needed = None
+        self._on_error = None
 
     def set_callbacks(self, on_phase_change=None, on_trace_update=None,
-                      on_human_review_needed=None):
+                      on_human_review_needed=None, on_error=None):
         """Register GUI callback functions."""
         self._on_phase_change = on_phase_change
         self._on_trace_update = on_trace_update
         self._on_human_review_needed = on_human_review_needed
+        self._on_error = on_error
 
     def _emit_phase(self, state: PipelineState, phase: Phase):
         state["phase"] = phase.value
@@ -174,6 +179,10 @@ class OrchoBraceOrchestrator:
         logger.info(message)
         if self._on_trace_update:
             self._on_trace_update(message)
+
+    def _emit_error(self, message: str):
+        if self._on_error:
+            self._on_error(message)
 
     # ---------------------------------------------------------------------------
     # Main pipeline entry point
@@ -267,22 +276,68 @@ class OrchoBraceOrchestrator:
             self._emit_phase(state, Phase.COMPLETE)
             self._emit_trace(state, "✓ Pipeline completed successfully")
 
-        except Exception as e:
-            state["errors"].append(f"Pipeline exception: {str(e)}")
+        except OrthoError as e:
+            state["errors"].append(f"Pipeline error ({type(e).__name__}): {e}")
             self._emit_phase(state, Phase.ERROR)
-            logger.exception("Pipeline error")
+            self._emit_error(str(e))
+            logger.error("Pipeline domain error", exc_info=True)
+        except Exception as e:
+            state["errors"].append(f"Unexpected pipeline exception: {str(e)}")
+            self._emit_phase(state, Phase.ERROR)
+            self._emit_error(str(e))
+            logger.exception("Unexpected pipeline error")
 
         return state
 
     # ---------------------------------------------------------------------------
     # Pipeline Nodes
     # ---------------------------------------------------------------------------
+    def _validate_measurements(self, state: PipelineState) -> None:
+        """Cross-validate patient measurements against PEDIATRIC_ANTHRO ranges.
+
+        Adds warnings to state when measurements deviate from age-based norms.
+        Does not block the pipeline — warnings only.
+        """
+        patient = state["patient"]
+        age = patient.get("age", 0)
+        if age not in PEDIATRIC_ANTHRO:
+            return
+
+        fl_min, fl_max, aw_min, aw_max = PEDIATRIC_ANTHRO[age]
+        foot_length = patient.get("foot_length_mm")
+        ankle_width = patient.get("ankle_width_mm")
+
+        if foot_length is not None:
+            if foot_length < fl_min or foot_length > fl_max:
+                state["warnings"].append(
+                    f"Foot length {foot_length}mm outside expected range "
+                    f"[{fl_min}-{fl_max}mm] for age {age}"
+                )
+                self._emit_trace(
+                    state,
+                    f"⚠ Foot length {foot_length}mm outside range [{fl_min}-{fl_max}] for age {age}",
+                )
+
+        if ankle_width is not None:
+            if ankle_width < aw_min or ankle_width > aw_max:
+                state["warnings"].append(
+                    f"Ankle width {ankle_width}mm outside expected range "
+                    f"[{aw_min}-{aw_max}mm] for age {age}"
+                )
+                self._emit_trace(
+                    state,
+                    f"⚠ Ankle width {ankle_width}mm outside range [{aw_min}-{aw_max}] for age {age}",
+                )
+
     def _node_intake(self, state: PipelineState) -> PipelineState:
         """Phase 1: Process patient intake data and create DB records."""
         self._emit_phase(state, Phase.INTAKE)
         self._emit_trace(state, "Processing patient intake data")
 
         patient_data = state["patient"]
+
+        # Cross-validate measurements against age norms
+        self._validate_measurements(state)
 
         # Create patient record
         record = PatientRecord(
@@ -366,9 +421,11 @@ class OrchoBraceOrchestrator:
         self._emit_phase(state, Phase.PARAMETRIC)
         self._emit_trace(state, "Generating parametric predictions")
 
-        result = self.agents["ortho_insoles"].execute({
+        result = self.agents["ortho_insoles"].run({
             "scan_path": state.get("scan_path", ""),
             "measurements": state.get("measurements", {}),
+            "run_id": state["run_id"],
+            "patient_id": state["patient_id"],
         })
 
         if result.success:
@@ -401,12 +458,14 @@ class OrchoBraceOrchestrator:
                 f"idiopathic toe walking, age {state['patient'].get('age', 6)} years"
             ),
             "max_iterations": MAX_AGENT_ITERATIONS,
+            "run_id": state["run_id"],
+            "patient_id": state["patient_id"],
         }
 
         # Attempt 1: build123d (preferred)
         if state["cad_engine"] in ("build123d", PREFERRED_CAD_ENGINE):
             self._emit_trace(state, "Attempting build123d generation (FormaAI)")
-            result = self.agents["forma_ai"].execute(gen_params)
+            result = self.agents["forma_ai"].run(gen_params)
             if result.success and result.output_files:
                 state["cad_result"] = result.output_data
                 state["stl_path"] = result.output_files[0]
@@ -422,7 +481,7 @@ class OrchoBraceOrchestrator:
 
         # Attempt 2: OpenSCAD
         self._emit_trace(state, "Falling back to OpenSCAD (Agentic3D)")
-        result = self.agents["agentic3d"].execute(gen_params)
+        result = self.agents["agentic3d"].run(gen_params)
         if result.success and result.output_files:
             state["cad_result"] = result.output_data
             state["stl_path"] = result.output_files[0]
@@ -436,7 +495,7 @@ class OrchoBraceOrchestrator:
 
         # Attempt 3: Chat-To-STL fallback
         self._emit_trace(state, "Falling back to Chat-To-STL")
-        result = self.agents["chat_to_stl"].execute(gen_params)
+        result = self.agents["chat_to_stl"].run(gen_params)
         if result.success and result.output_files:
             state["cad_result"] = result.output_data
             state["stl_path"] = result.output_files[0]
@@ -462,9 +521,11 @@ class OrchoBraceOrchestrator:
             self._emit_trace(state, "No STL available for render")
             return state
 
-        result = self.agents["cad_render"].execute({
+        result = self.agents["cad_render"].run({
             "mesh_path": state["stl_path"],
             "design_id": state["design_id"],
+            "run_id": state["run_id"],
+            "patient_id": state["patient_id"],
         })
 
         if result.success:
@@ -484,10 +545,12 @@ class OrchoBraceOrchestrator:
         if not state.get("stl_path"):
             return state
 
-        result = self.agents["vlm_critique"].execute({
+        result = self.agents["vlm_critique"].run({
             "mesh_path": state["stl_path"],
             "design_id": state["design_id"],
             "constraints": state.get("constraints", {}),
+            "run_id": state["run_id"],
+            "patient_id": state["patient_id"],
         })
 
         if result.success:
@@ -562,11 +625,13 @@ class OrchoBraceOrchestrator:
         self._emit_trace(state, "Evaluating lattice reinforcement requirements")
 
         constraints = state.get("constraints", {})
-        result = self.agents["agentic_alloy"].execute({
+        result = self.agents["agentic_alloy"].run({
             "dynamic_load_n": constraints.get("dynamic_load_n", 300),
             "severity": state.get("severity", "moderate"),
             "material": constraints.get("material_recommendation", "petg"),
             "wall_thickness_mm": constraints.get("wall_thickness_mm", 3.0),
+            "run_id": state["run_id"],
+            "patient_id": state["patient_id"],
         })
 
         evaluation = result.output_data.get("lattice_evaluation", {})
@@ -647,11 +712,11 @@ class OrchoBraceOrchestrator:
         self._emit_phase(state, Phase.EXPORT)
         self._emit_trace(state, "Exporting design files and audit report")
 
-        export_paths = []
+        export_paths: List[str] = []
         if state.get("stl_path"):
-            export_paths.append(state["stl_path"])
+            export_paths.append(state["stl_path"])  # type: ignore[arg-type]
         if state.get("step_path"):
-            export_paths.append(state["step_path"])
+            export_paths.append(state["step_path"])  # type: ignore[arg-type]
 
         state["export_paths"] = export_paths
 
@@ -662,12 +727,12 @@ class OrchoBraceOrchestrator:
             pdf_path = pdf_gen.generate(
                 patient_id=state["patient_id"],
                 design_id=state["design_id"],
-                state=state,
+                state=dict(state),  # type: ignore[arg-type]
             )
             state["audit_pdf_path"] = pdf_path
             export_paths.append(pdf_path)
             self._emit_trace(state, f"✓ Audit PDF generated: {pdf_path}")
-        except Exception as e:
+        except (ImportError, OSError, ValueError) as e:
             self._emit_trace(state, f"Audit PDF generation failed: {e}")
             state["warnings"].append(f"Audit PDF generation failed: {e}")
 
@@ -685,7 +750,11 @@ class OrchoBraceOrchestrator:
         self._emit_trace(state, "Queuing to print via MCP broker")
 
         # Check printer status
-        status_result = self.agents["octo_mcp"].execute({"action": "status"})
+        status_result = self.agents["octo_mcp"].run({
+            "action": "status",
+            "run_id": state["run_id"],
+            "patient_id": state["patient_id"],
+        })
         state["printer_status"] = status_result.output_data.get("printer_status", {})
 
         printer_state = state["printer_status"].get("state", "offline")
@@ -696,9 +765,11 @@ class OrchoBraceOrchestrator:
 
         # Upload and start print
         stl_path = state.get("stl_path", "")
-        upload_result = self.agents["octo_mcp"].execute({
+        upload_result = self.agents["octo_mcp"].run({
             "action": "upload",
             "gcode_path": stl_path,  # In production: slice STL → G-code first
+            "run_id": state["run_id"],
+            "patient_id": state["patient_id"],
         })
 
         if upload_result.output_data.get("uploaded"):

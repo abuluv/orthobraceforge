@@ -5,14 +5,13 @@ Covers text-report fallback and PDF generation path (with reportlab mocked).
 import sys
 import uuid
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 import config
-from database import Database, PatientRecord, DesignRecord
+from database import Database, DesignRecord, PatientRecord
 from export import AuditPDFGenerator
-
 
 # ---------------------------------------------------------------------------
 # Fixtures

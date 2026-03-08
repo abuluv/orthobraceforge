@@ -2,9 +2,10 @@
 Shared pytest fixtures for OrthoBraceForge test suite.
 """
 import json
+
 import pytest
 
-from database import Database, PatientRecord, DesignRecord
+from database import Database, DesignRecord, PatientRecord
 
 
 @pytest.fixture

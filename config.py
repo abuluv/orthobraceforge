@@ -4,15 +4,15 @@ All paths, feature flags, clinical constants, and material specs.
 """
 import os
 import sys
+from dataclasses import dataclass
 from pathlib import Path
-from dataclasses import dataclass, field
-from typing import Dict, List
+from typing import Dict
 
 # ---------------------------------------------------------------------------
 # Path resolution (works both in dev and PyInstaller frozen mode)
 # ---------------------------------------------------------------------------
 if getattr(sys, "frozen", False):
-    BASE_DIR = Path(sys._MEIPASS)
+    BASE_DIR = Path(sys._MEIPASS)  # type: ignore[attr-defined]
     USER_DATA = Path(os.environ.get("APPDATA", "~")) / "OrthoBraceForge"
 else:
     BASE_DIR = Path(__file__).resolve().parent
@@ -230,3 +230,10 @@ HUMAN_REVIEW_REQUIRED = True           # NEVER set False in production
 PREFERRED_CAD_ENGINE = "build123d"     # "build123d" | "openscad" | "chat_to_stl"
 LOCAL_LLM_MODEL = "llama3.2"           # Assumed local via Ollama or similar
 EMBEDDING_MODEL = "all-MiniLM-L6-v2"  # Sentence-transformers for RAG
+
+# ---------------------------------------------------------------------------
+# Logging configuration
+# ---------------------------------------------------------------------------
+LOG_MAX_BYTES = 5 * 1024 * 1024  # 5 MB per log file
+LOG_BACKUP_COUNT = 5
+JSON_LOGGING_ENABLED = False

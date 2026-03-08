@@ -3,15 +3,13 @@ Integration tests for OrthoBraceForge orchestration pipeline.
 Tests the full pipeline flow, phase transitions, compliance blocking,
 CAD fallback chains, human review gate, and error recovery.
 """
-import json
+from unittest.mock import MagicMock, patch
+
 import pytest
-from pathlib import Path
-from unittest.mock import MagicMock, patch, PropertyMock
 
 from agents import AgentResult
 from database import Database
-from orchestration import OrchoBraceOrchestrator, Phase, PipelineState
-
+from orchestration import OrchoBraceOrchestrator, Phase
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -72,6 +70,7 @@ def orchestrator(db):
     orch._on_phase_change = None
     orch._on_trace_update = None
     orch._on_human_review_needed = None
+    orch._on_error = None
 
     # Default compliance RAG returns passing result
     orch.rag.check_design_compliance.return_value = {
@@ -119,7 +118,7 @@ def orchestrator(db):
     }
 
     # Default execute returns for every agent
-    orch.agents["ortho_insoles"].execute.return_value = _success_result(
+    orch.agents["ortho_insoles"].run.return_value = _success_result(
         "ortho_insoles",
         output_data={
             "predictions": {
@@ -129,35 +128,35 @@ def orchestrator(db):
             "measurements": {"foot_length": 180, "ankle_width": 50},
         },
     )
-    orch.agents["forma_ai"].execute.return_value = _success_result(
+    orch.agents["forma_ai"].run.return_value = _success_result(
         "forma_ai",
         output_data={"build123d_code": "# mock code"},
         output_files=[stl_path, step_path],
         iterations=3,
     )
-    orch.agents["agentic3d"].execute.return_value = _success_result(
+    orch.agents["agentic3d"].run.return_value = _success_result(
         "agentic3d",
         output_files=[stl_path],
         iterations=2,
     )
-    orch.agents["chat_to_stl"].execute.return_value = _success_result(
+    orch.agents["chat_to_stl"].run.return_value = _success_result(
         "chat_to_stl",
         output_files=[stl_path],
         iterations=1,
     )
-    orch.agents["cad_render"].execute.return_value = _success_result(
+    orch.agents["cad_render"].run.return_value = _success_result(
         "cad_render",
         output_files=["/tmp/render_front.png", "/tmp/render_side.png"],
     )
-    orch.agents["vlm_critique"].execute.return_value = _success_result(
+    orch.agents["vlm_critique"].run.return_value = _success_result(
         "vlm_critique",
         output_data={"critique": {"score": 8, "issues": []}},
     )
-    orch.agents["agentic_alloy"].execute.return_value = _success_result(
+    orch.agents["agentic_alloy"].run.return_value = _success_result(
         "agentic_alloy",
         output_data={"lattice_evaluation": {"needs_reinforcement": False}},
     )
-    orch.agents["octo_mcp"].execute.return_value = _success_result(
+    orch.agents["octo_mcp"].run.return_value = _success_result(
         "octo_mcp",
         output_data={"printer_status": {"state": "operational"}},
     )
@@ -309,10 +308,10 @@ class TestComplianceBlocking:
 class TestCADFallbackChain:
     def test_fallback_to_openscad_when_forma_fails(self, orchestrator):
         """When FormaAI (build123d) fails, should fall back to OpenSCAD (agentic3d)."""
-        orchestrator.agents["forma_ai"].execute.return_value = _failure_result("forma_ai")
+        orchestrator.agents["forma_ai"].run.return_value = _failure_result("forma_ai")
 
         stl_path = "/tmp/openscad_output.stl"
-        orchestrator.agents["agentic3d"].execute.return_value = _success_result(
+        orchestrator.agents["agentic3d"].run.return_value = _success_result(
             "agentic3d",
             output_files=[stl_path],
             iterations=2,
@@ -329,11 +328,11 @@ class TestCADFallbackChain:
 
     def test_fallback_to_chat_to_stl(self, orchestrator):
         """When both FormaAI and Agentic3D fail, should fall back to Chat-To-STL."""
-        orchestrator.agents["forma_ai"].execute.return_value = _failure_result("forma_ai")
-        orchestrator.agents["agentic3d"].execute.return_value = _failure_result("agentic3d")
+        orchestrator.agents["forma_ai"].run.return_value = _failure_result("forma_ai")
+        orchestrator.agents["agentic3d"].run.return_value = _failure_result("agentic3d")
 
         stl_path = "/tmp/chat_to_stl_output.stl"
-        orchestrator.agents["chat_to_stl"].execute.return_value = _success_result(
+        orchestrator.agents["chat_to_stl"].run.return_value = _success_result(
             "chat_to_stl",
             output_files=[stl_path],
             iterations=1,
@@ -354,9 +353,9 @@ class TestCADFallbackChain:
 class TestAllCADEnginesFail:
     def test_error_state_when_all_cad_engines_fail(self, orchestrator):
         """When all three CAD engines fail, pipeline should enter ERROR state."""
-        orchestrator.agents["forma_ai"].execute.return_value = _failure_result("forma_ai")
-        orchestrator.agents["agentic3d"].execute.return_value = _failure_result("agentic3d")
-        orchestrator.agents["chat_to_stl"].execute.return_value = _failure_result("chat_to_stl")
+        orchestrator.agents["forma_ai"].run.return_value = _failure_result("forma_ai")
+        orchestrator.agents["agentic3d"].run.return_value = _failure_result("agentic3d")
+        orchestrator.agents["chat_to_stl"].run.return_value = _failure_result("chat_to_stl")
 
         state = orchestrator.run_pipeline(
             patient_data=SAMPLE_PATIENT.copy(),
@@ -554,7 +553,7 @@ class TestHumanReviewGate:
 class TestErrorRecovery:
     def test_exception_in_node_enters_error_phase(self, orchestrator):
         """An exception raised in a pipeline node should result in ERROR phase."""
-        orchestrator.agents["ortho_insoles"].execute.side_effect = RuntimeError(
+        orchestrator.agents["ortho_insoles"].run.side_effect = RuntimeError(
             "Simulated agent crash"
         )
 
@@ -568,7 +567,7 @@ class TestErrorRecovery:
 
     def test_exception_in_render_enters_error_phase(self, orchestrator):
         """An exception in the render node should result in ERROR phase."""
-        orchestrator.agents["cad_render"].execute.side_effect = ValueError(
+        orchestrator.agents["cad_render"].run.side_effect = ValueError(
             "Render engine exploded"
         )
 
@@ -583,7 +582,7 @@ class TestErrorRecovery:
     def test_exception_preserves_partial_state(self, orchestrator):
         """Even after an exception, state should contain data from completed phases."""
         # Let parametric fail, so intake and compliance succeed first
-        orchestrator.agents["ortho_insoles"].execute.side_effect = RuntimeError("boom")
+        orchestrator.agents["ortho_insoles"].run.side_effect = RuntimeError("boom")
 
         state = orchestrator.run_pipeline(
             patient_data=SAMPLE_PATIENT.copy(),
@@ -679,3 +678,62 @@ class TestDatabaseIntegration:
         actions = [e.action for e in trail]
         assert "create" in actions
         assert "compliance_check" in actions
+
+
+class TestMeasurementValidation:
+    def test_no_warnings_when_measurements_absent(self, orchestrator):
+        """No warnings if foot_length_mm/ankle_width_mm not provided."""
+        state = orchestrator.run_pipeline(
+            patient_data=SAMPLE_PATIENT.copy(),
+            preset_key="mild_bilateral",
+        )
+        measurement_warnings = [w for w in state["warnings"] if "outside expected range" in w]
+        assert len(measurement_warnings) == 0
+
+    def test_warning_when_foot_length_out_of_range(self, orchestrator):
+        """Foot length outside PEDIATRIC_ANTHRO range should produce a warning."""
+        patient = SAMPLE_PATIENT.copy()
+        patient["foot_length_mm"] = 300  # Way too large for age 6
+        state = orchestrator.run_pipeline(
+            patient_data=patient,
+            preset_key="mild_bilateral",
+        )
+        foot_warnings = [w for w in state["warnings"] if "Foot length" in w]
+        assert len(foot_warnings) == 1
+        assert "300" in foot_warnings[0]
+
+    def test_warning_when_ankle_width_out_of_range(self, orchestrator):
+        """Ankle width outside PEDIATRIC_ANTHRO range should produce a warning."""
+        patient = SAMPLE_PATIENT.copy()
+        patient["ankle_width_mm"] = 20  # Way too small for age 6
+        state = orchestrator.run_pipeline(
+            patient_data=patient,
+            preset_key="mild_bilateral",
+        )
+        ankle_warnings = [w for w in state["warnings"] if "Ankle width" in w]
+        assert len(ankle_warnings) == 1
+        assert "20" in ankle_warnings[0]
+
+    def test_no_warning_when_measurements_in_range(self, orchestrator):
+        """Measurements within PEDIATRIC_ANTHRO range should not warn."""
+        patient = SAMPLE_PATIENT.copy()
+        patient["foot_length_mm"] = 180  # Within [165, 200] for age 6
+        patient["ankle_width_mm"] = 50   # Within [46, 55] for age 6
+        state = orchestrator.run_pipeline(
+            patient_data=patient,
+            preset_key="mild_bilateral",
+        )
+        measurement_warnings = [w for w in state["warnings"] if "outside expected range" in w]
+        assert len(measurement_warnings) == 0
+
+    def test_no_validation_for_unknown_age(self, orchestrator):
+        """Ages not in PEDIATRIC_ANTHRO should skip validation."""
+        patient = SAMPLE_PATIENT.copy()
+        patient["age"] = 15
+        patient["foot_length_mm"] = 500
+        state = orchestrator.run_pipeline(
+            patient_data=patient,
+            preset_key="mild_bilateral",
+        )
+        foot_warnings = [w for w in state["warnings"] if "Foot length" in w]
+        assert len(foot_warnings) == 0

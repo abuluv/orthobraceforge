@@ -2,12 +2,11 @@
 OrthoBraceForge — Export & Audit PDF Generator
 ISO 13485 §4.2.5 compliant audit report generation.
 """
-import json
-from pathlib import Path
 from datetime import datetime, timezone
-from typing import Dict, Any, Optional
+from pathlib import Path
+from typing import Any, Dict
 
-from config import EXPORT_DIR, APP_CLASSIFICATION, APP_VERSION, REGULATORY_BANNER
+from config import APP_CLASSIFICATION, APP_VERSION, EXPORT_DIR, REGULATORY_BANNER
 
 
 class AuditPDFGenerator:
@@ -23,13 +22,18 @@ class AuditPDFGenerator:
         Returns path to generated PDF.
         """
         try:
+            from reportlab.lib.colors import HexColor, gray, red
             from reportlab.lib.pagesizes import letter
+            from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
             from reportlab.lib.units import inch
-            from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-            from reportlab.lib.colors import red, black, gray, HexColor
             from reportlab.platypus import (
-                SimpleDocTemplate, Paragraph, Spacer, Table,
-                TableStyle, PageBreak, HRFlowable,
+                HRFlowable,
+                PageBreak,
+                Paragraph,
+                SimpleDocTemplate,
+                Spacer,
+                Table,
+                TableStyle,
             )
 
             pdf_path = str(EXPORT_DIR / f"audit_{design_id[:8]}.pdf")

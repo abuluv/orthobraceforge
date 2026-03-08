@@ -10,12 +10,14 @@ Domain-specific Retrieval-Augmented Generation for:
 All knowledge is embedded locally — no internet required post-install.
 """
 import json
-import os
-from pathlib import Path
-from typing import List, Dict, Tuple, Optional
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
+
 import numpy as np
-from config import RAG_DATA_DIR, APP_CLASSIFICATION
+
+from config import APP_CLASSIFICATION, RAG_DATA_DIR
+
 
 # ---------------------------------------------------------------------------
 # Knowledge Base Document Types
@@ -356,11 +358,11 @@ class ComplianceRAG:
             # Compute keyword overlap score
             doc_tokens = set(w.lower() for w in doc.keywords)
             doc_tokens.update(w.lower() for w in doc.title.split())
-            overlap = len(query_tokens & doc_tokens)
+            overlap: float = len(query_tokens & doc_tokens)
             if overlap == 0:
                 # Check content for partial matches
                 content_lower = doc.content.lower()
-                overlap = sum(1 for t in query_tokens if t in content_lower) * 0.5
+                overlap = float(sum(1 for t in query_tokens if t in content_lower)) * 0.5
             if overlap > 0:
                 severity_weight = self._severity_weights.get(doc.severity, 1.0)
                 score = overlap * severity_weight
@@ -476,13 +478,13 @@ class ComplianceRAG:
         Generate design constraints based on clinical parameters and
         regulatory requirements.
         """
-        from config import TOE_WALKING_PRESETS, PEDIATRIC_ANTHRO, FEA_DEFAULTS
+        from config import FEA_DEFAULTS, PEDIATRIC_ANTHRO, TOE_WALKING_PRESETS
 
         preset = TOE_WALKING_PRESETS.get(preset_key)
         if not preset:
             return {"error": f"Unknown preset: {preset_key}"}
 
-        anthro = PEDIATRIC_ANTHRO.get(age, PEDIATRIC_ANTHRO.get(6))  # default to age 6
+        anthro = PEDIATRIC_ANTHRO.get(age) or PEDIATRIC_ANTHRO.get(6) or (165, 200, 46, 58)
 
         dynamic_load_n = weight_kg * 9.81 * FEA_DEFAULTS.body_weight_multiplier
 
