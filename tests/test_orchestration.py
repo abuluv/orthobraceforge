@@ -3,15 +3,13 @@ Integration tests for OrthoBraceForge orchestration pipeline.
 Tests the full pipeline flow, phase transitions, compliance blocking,
 CAD fallback chains, human review gate, and error recovery.
 """
-import json
+from unittest.mock import MagicMock, patch
+
 import pytest
-from pathlib import Path
-from unittest.mock import MagicMock, patch, PropertyMock
 
 from agents import AgentResult
 from database import Database
-from orchestration import OrchoBraceOrchestrator, Phase, PipelineState
-
+from orchestration import OrchoBraceOrchestrator, Phase
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -680,3 +678,62 @@ class TestDatabaseIntegration:
         actions = [e.action for e in trail]
         assert "create" in actions
         assert "compliance_check" in actions
+
+
+class TestMeasurementValidation:
+    def test_no_warnings_when_measurements_absent(self, orchestrator):
+        """No warnings if foot_length_mm/ankle_width_mm not provided."""
+        state = orchestrator.run_pipeline(
+            patient_data=SAMPLE_PATIENT.copy(),
+            preset_key="mild_bilateral",
+        )
+        measurement_warnings = [w for w in state["warnings"] if "outside expected range" in w]
+        assert len(measurement_warnings) == 0
+
+    def test_warning_when_foot_length_out_of_range(self, orchestrator):
+        """Foot length outside PEDIATRIC_ANTHRO range should produce a warning."""
+        patient = SAMPLE_PATIENT.copy()
+        patient["foot_length_mm"] = 300  # Way too large for age 6
+        state = orchestrator.run_pipeline(
+            patient_data=patient,
+            preset_key="mild_bilateral",
+        )
+        foot_warnings = [w for w in state["warnings"] if "Foot length" in w]
+        assert len(foot_warnings) == 1
+        assert "300" in foot_warnings[0]
+
+    def test_warning_when_ankle_width_out_of_range(self, orchestrator):
+        """Ankle width outside PEDIATRIC_ANTHRO range should produce a warning."""
+        patient = SAMPLE_PATIENT.copy()
+        patient["ankle_width_mm"] = 20  # Way too small for age 6
+        state = orchestrator.run_pipeline(
+            patient_data=patient,
+            preset_key="mild_bilateral",
+        )
+        ankle_warnings = [w for w in state["warnings"] if "Ankle width" in w]
+        assert len(ankle_warnings) == 1
+        assert "20" in ankle_warnings[0]
+
+    def test_no_warning_when_measurements_in_range(self, orchestrator):
+        """Measurements within PEDIATRIC_ANTHRO range should not warn."""
+        patient = SAMPLE_PATIENT.copy()
+        patient["foot_length_mm"] = 180  # Within [165, 200] for age 6
+        patient["ankle_width_mm"] = 50   # Within [46, 55] for age 6
+        state = orchestrator.run_pipeline(
+            patient_data=patient,
+            preset_key="mild_bilateral",
+        )
+        measurement_warnings = [w for w in state["warnings"] if "outside expected range" in w]
+        assert len(measurement_warnings) == 0
+
+    def test_no_validation_for_unknown_age(self, orchestrator):
+        """Ages not in PEDIATRIC_ANTHRO should skip validation."""
+        patient = SAMPLE_PATIENT.copy()
+        patient["age"] = 15
+        patient["foot_length_mm"] = 500
+        state = orchestrator.run_pipeline(
+            patient_data=patient,
+            preset_key="mild_bilateral",
+        )
+        foot_warnings = [w for w in state["warnings"] if "Foot length" in w]
+        assert len(foot_warnings) == 0

@@ -4,28 +4,33 @@ Unified interface classes for all 9 vendored repository integrations.
 Each agent is a self-contained unit that can be orchestrated by LangGraph.
 """
 import json
+import logging
 import os
 import subprocess
-import tempfile
-import logging
-from pathlib import Path
-from typing import Dict, Any, Optional, List, Tuple
-from dataclasses import dataclass, field
 from abc import ABC, abstractmethod
-
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
 from config import (
-    BASE_DIR, EXPORT_DIR, PREFERRED_CAD_ENGINE,
-    MAX_AGENT_ITERATIONS, VLM_CRITIQUE_MAX_ROUNDS,
-    MATERIALS, FEA_DEFAULTS,
-    OPENSCAD_TIMEOUT_SEC, BUILD123D_TIMEOUT_SEC, OCTOPRINT_CONNECT_TIMEOUT_SEC,
-    AFO_LENGTH_MIN_MM, AFO_LENGTH_MAX_MM, AFO_HEIGHT_MIN_MM, AFO_HEIGHT_MAX_MM,
-    OCTOPRINT_URL, OCTOPRINT_API_KEY,
+    AFO_HEIGHT_MAX_MM,
+    AFO_HEIGHT_MIN_MM,
+    AFO_LENGTH_MAX_MM,
+    AFO_LENGTH_MIN_MM,
+    BUILD123D_TIMEOUT_SEC,
+    EXPORT_DIR,
+    FEA_DEFAULTS,
+    MATERIALS,
+    MAX_AGENT_ITERATIONS,
+    OCTOPRINT_API_KEY,
+    OCTOPRINT_CONNECT_TIMEOUT_SEC,
+    OCTOPRINT_URL,
+    OPENSCAD_TIMEOUT_SEC,
+    VLM_CRITIQUE_MAX_ROUNDS,
 )
 from exceptions import (
-    OrthoError, CADGenerationError, PrinterConnectionError,
-    MeasurementValidationError,
+    CADGenerationError,
 )
 
 logger = logging.getLogger("orthobraceforge.agents")
@@ -952,8 +957,8 @@ class OctoMCPAgent(BaseAgent):
 
     def _upload_gcode(self, gcode_path: str) -> bool:
         """Upload G-code file to OctoPrint via multipart POST /api/files/local."""
-        import urllib.request
         import urllib.error
+        import urllib.request
 
         self._validate_api_key()
 
@@ -1003,8 +1008,8 @@ class OctoMCPAgent(BaseAgent):
 
     def _start_print(self, filename: str) -> bool:
         """Issue a start-job command to OctoPrint via POST /api/job."""
-        import urllib.request
         import urllib.error
+        import urllib.request
 
         self._validate_api_key()
 

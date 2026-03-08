@@ -8,13 +8,13 @@ and error handling using mocked external dependencies.
 import json
 import os
 import subprocess
-import tempfile
-import unittest
-from pathlib import Path
-from unittest.mock import MagicMock, patch, mock_open, PropertyMock
 
 # Patch config before importing agents so EXPORT_DIR points to a temp directory.
 import sys
+import tempfile
+import unittest
+from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 # We need config importable; it lives alongside agents.py.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -26,20 +26,19 @@ _TEST_EXPORT_DIR = Path(tempfile.mkdtemp(prefix="obf_test_"))
 config.EXPORT_DIR = _TEST_EXPORT_DIR
 
 from agents import (  # noqa: E402
+    Agentic3DAgent,
+    AgenticAlloyAgent,
     AgentResult,
     BaseAgent,
-    Agentic3DAgent,
-    FormaAIAgent,
-    TalkCADAgent,
     CADRenderAgent,
-    PrintDefectAgent,
-    OrthoInsolesAgent,
-    OctoMCPAgent,
-    AgenticAlloyAgent,
     ChatToSTLAgent,
+    FormaAIAgent,
+    OctoMCPAgent,
+    OrthoInsolesAgent,
+    PrintDefectAgent,
+    TalkCADAgent,
     VLMCritiqueAgent,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -813,7 +812,7 @@ class TestChatToSTLAgent(unittest.TestCase):
     def test_stl_quad_helper(self):
         lines = ChatToSTLAgent._stl_quad(0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0)
         # Should produce 2 facets (triangle pairs).
-        facet_count = sum(1 for l in lines if "facet normal" in l)
+        facet_count = sum(1 for line in lines if "facet normal" in line)
         self.assertEqual(facet_count, 2)
 
     def test_execute_with_default_constraints(self):

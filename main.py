@@ -8,11 +8,11 @@ Launch sequence:
   3. Initialize database + orchestrator
   4. Launch main window
 """
-import sys
-import os
 import json
 import logging
 import logging.handlers
+import os
+import sys
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
@@ -38,7 +38,7 @@ class JsonFormatter(logging.Formatter):
 
 
 def setup_logging():
-    from config import LOG_MAX_BYTES, LOG_BACKUP_COUNT, JSON_LOGGING_ENABLED
+    from config import JSON_LOGGING_ENABLED, LOG_BACKUP_COUNT, LOG_MAX_BYTES
 
     log_dir = Path(os.environ.get("APPDATA", Path.home())) / "OrthoBraceForge" / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
@@ -70,9 +70,9 @@ def main():
     logger.info("OrthoBraceForge starting")
 
     # Import Qt after path fixup
-    from PyQt6.QtWidgets import QApplication, QSplashScreen, QMessageBox
-    from PyQt6.QtGui import QPixmap, QFont, QColor
-    from PyQt6.QtCore import Qt, QTimer
+    from PyQt6.QtCore import Qt
+    from PyQt6.QtGui import QColor, QFont, QPixmap
+    from PyQt6.QtWidgets import QApplication, QMessageBox, QSplashScreen
 
     app = QApplication(sys.argv)
     app.setApplicationName("OrthoBraceForge")
@@ -100,14 +100,14 @@ def main():
     app.processEvents()
 
     # --- Regulatory Acknowledgment (first run) ---
-    from config import DB_PATH, REGULATORY_BANNER, OCTOPRINT_API_KEY
+    from config import DB_PATH, OCTOPRINT_API_KEY, REGULATORY_BANNER
     first_run = not DB_PATH.exists()
 
     # --- Initialize Core Systems ---
     try:
         from database import Database
-        from orchestration import OrchoBraceOrchestrator
         from gui import MainWindow
+        from orchestration import OrchoBraceOrchestrator
 
         db = Database()
         orchestrator = OrchoBraceOrchestrator(db=db)

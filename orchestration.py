@@ -17,31 +17,33 @@ State machine phases:
   11. PRINT        → Optional MCP print queue + monitoring
 """
 import json
-import uuid
 import logging
-from typing import Dict, Any, Optional, List, TypedDict, Annotated
-from enum import Enum
+import uuid
 from datetime import datetime, timezone
+from enum import Enum
+from typing import Any, Dict, List, Optional, TypedDict
 
-from config import (
-    PREFERRED_CAD_ENGINE, HUMAN_REVIEW_REQUIRED,
-    MAX_AGENT_ITERATIONS, TOE_WALKING_PRESETS, EXPORT_DIR,
-)
 from agents import (
-    AgentResult,
     Agentic3DAgent,
-    FormaAIAgent,
-    TalkCADAgent,
-    CADRenderAgent,
-    PrintDefectAgent,
-    OrthoInsolesAgent,
-    OctoMCPAgent,
     AgenticAlloyAgent,
+    CADRenderAgent,
     ChatToSTLAgent,
+    FormaAIAgent,
+    OctoMCPAgent,
+    OrthoInsolesAgent,
+    PrintDefectAgent,
+    TalkCADAgent,
     VLMCritiqueAgent,
 )
 from compliance_rag import ComplianceRAG
-from database import Database, PatientRecord, DesignRecord, AuditEntry
+from config import (
+    HUMAN_REVIEW_REQUIRED,
+    MAX_AGENT_ITERATIONS,
+    PEDIATRIC_ANTHRO,
+    PREFERRED_CAD_ENGINE,
+    TOE_WALKING_PRESETS,
+)
+from database import Database, DesignRecord, PatientRecord
 from exceptions import OrthoError
 
 logger = logging.getLogger("orthobraceforge.orchestration")
@@ -290,12 +292,52 @@ class OrchoBraceOrchestrator:
     # ---------------------------------------------------------------------------
     # Pipeline Nodes
     # ---------------------------------------------------------------------------
+    def _validate_measurements(self, state: PipelineState) -> None:
+        """Cross-validate patient measurements against PEDIATRIC_ANTHRO ranges.
+
+        Adds warnings to state when measurements deviate from age-based norms.
+        Does not block the pipeline — warnings only.
+        """
+        patient = state["patient"]
+        age = patient.get("age", 0)
+        if age not in PEDIATRIC_ANTHRO:
+            return
+
+        fl_min, fl_max, aw_min, aw_max = PEDIATRIC_ANTHRO[age]
+        foot_length = patient.get("foot_length_mm")
+        ankle_width = patient.get("ankle_width_mm")
+
+        if foot_length is not None:
+            if foot_length < fl_min or foot_length > fl_max:
+                state["warnings"].append(
+                    f"Foot length {foot_length}mm outside expected range "
+                    f"[{fl_min}-{fl_max}mm] for age {age}"
+                )
+                self._emit_trace(
+                    state,
+                    f"⚠ Foot length {foot_length}mm outside range [{fl_min}-{fl_max}] for age {age}",
+                )
+
+        if ankle_width is not None:
+            if ankle_width < aw_min or ankle_width > aw_max:
+                state["warnings"].append(
+                    f"Ankle width {ankle_width}mm outside expected range "
+                    f"[{aw_min}-{aw_max}mm] for age {age}"
+                )
+                self._emit_trace(
+                    state,
+                    f"⚠ Ankle width {ankle_width}mm outside range [{aw_min}-{aw_max}] for age {age}",
+                )
+
     def _node_intake(self, state: PipelineState) -> PipelineState:
         """Phase 1: Process patient intake data and create DB records."""
         self._emit_phase(state, Phase.INTAKE)
         self._emit_trace(state, "Processing patient intake data")
 
         patient_data = state["patient"]
+
+        # Cross-validate measurements against age norms
+        self._validate_measurements(state)
 
         # Create patient record
         record = PatientRecord(

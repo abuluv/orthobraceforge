@@ -4,42 +4,42 @@ Unit tests for OrthoBraceForge configuration module.
 Covers path constants, clinical presets, material specs, anthropometric data,
 FEA defaults, timeout constants, and critical safety flags.
 """
-import pytest
 from pathlib import Path
 
+import pytest
+
 from config import (
-    BASE_DIR,
-    USER_DATA,
-    ASSETS_DIR,
-    RAG_DATA_DIR,
-    THEMES_DIR,
-    ICONS_DIR,
-    DB_PATH,
-    EXPORT_DIR,
+    AFO_HEIGHT_MAX_MM,
+    AFO_HEIGHT_MIN_MM,
+    AFO_LENGTH_MAX_MM,
+    AFO_LENGTH_MIN_MM,
+    APP_CLASSIFICATION,
     APP_NAME,
     APP_VERSION,
-    APP_CLASSIFICATION,
-    REGULATORY_BANNER,
-    ToeWalkingPreset,
-    TOE_WALKING_PRESETS,
-    MaterialSpec,
-    MATERIALS,
-    PEDIATRIC_ANTHRO,
-    FEADefaults,
-    FEA_DEFAULTS,
-    OPENSCAD_TIMEOUT_SEC,
+    ASSETS_DIR,
+    BASE_DIR,
     BUILD123D_TIMEOUT_SEC,
-    OCTOPRINT_CONNECT_TIMEOUT_SEC,
-    AFO_LENGTH_MIN_MM,
-    AFO_LENGTH_MAX_MM,
-    AFO_HEIGHT_MIN_MM,
-    AFO_HEIGHT_MAX_MM,
-    MAX_AGENT_ITERATIONS,
-    VLM_CRITIQUE_MAX_ROUNDS,
+    DB_PATH,
+    EXPORT_DIR,
+    FEA_DEFAULTS,
     HUMAN_REVIEW_REQUIRED,
+    ICONS_DIR,
+    MATERIALS,
+    MAX_AGENT_ITERATIONS,
+    OCTOPRINT_CONNECT_TIMEOUT_SEC,
+    OPENSCAD_TIMEOUT_SEC,
+    PEDIATRIC_ANTHRO,
     PREFERRED_CAD_ENGINE,
+    RAG_DATA_DIR,
+    REGULATORY_BANNER,
+    THEMES_DIR,
+    TOE_WALKING_PRESETS,
+    USER_DATA,
+    VLM_CRITIQUE_MAX_ROUNDS,
+    FEADefaults,
+    MaterialSpec,
+    ToeWalkingPreset,
 )
-
 
 # ── Path constants ──────────────────────────────────────────────────────────
 

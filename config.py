@@ -4,9 +4,9 @@ All paths, feature flags, clinical constants, and material specs.
 """
 import os
 import sys
+from dataclasses import dataclass
 from pathlib import Path
-from dataclasses import dataclass, field
-from typing import Dict, List
+from typing import Dict
 
 # ---------------------------------------------------------------------------
 # Path resolution (works both in dev and PyInstaller frozen mode)

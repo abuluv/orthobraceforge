@@ -6,8 +6,7 @@ import sqlite3
 
 import pytest
 
-from database import AuditEntry, Database, DesignRecord, PatientRecord
-
+from database import Database, DesignRecord, PatientRecord
 
 # ---------------------------------------------------------------------------
 # Helpers

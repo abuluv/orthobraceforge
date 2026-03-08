@@ -5,33 +5,51 @@ Generation Progress, Compliance Report, Export/Print Queue.
 
 Dark theme, high-contrast accessibility, touch-friendly (48px min targets).
 """
-import sys
-import json
 import logging
 from pathlib import Path
-from typing import Optional, Dict, Any, List
+from typing import List
 
-from PyQt6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QStackedWidget,
-    QVBoxLayout, QHBoxLayout, QGridLayout, QFormLayout,
-    QLabel, QPushButton, QLineEdit, QTextEdit, QComboBox,
-    QSpinBox, QDoubleSpinBox, QFileDialog, QProgressBar,
-    QGroupBox, QSplitter, QTabWidget, QMessageBox,
-    QDialog, QDialogButtonBox, QScrollArea, QFrame,
-    QSizePolicy, QStatusBar, QMenuBar, QToolBar,
-    QPlainTextEdit, QCheckBox, QRadioButton, QButtonGroup,
-)
 from PyQt6.QtCore import (
-    Qt, QThread, pyqtSignal, QTimer, QSize, QMargins,
+    Qt,
+    QThread,
+    pyqtSignal,
 )
 from PyQt6.QtGui import (
-    QFont, QIcon, QAction, QPalette, QColor, QPixmap,
+    QAction,
+)
+from PyQt6.QtWidgets import (
+    QButtonGroup,
+    QComboBox,
+    QDialog,
+    QDoubleSpinBox,
+    QFileDialog,
+    QFormLayout,
+    QGridLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMainWindow,
+    QMessageBox,
+    QPlainTextEdit,
+    QProgressBar,
+    QPushButton,
+    QRadioButton,
+    QScrollArea,
+    QSpinBox,
+    QTabWidget,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
 )
 
 from config import (
-    APP_NAME, APP_VERSION, APP_CLASSIFICATION, REGULATORY_BANNER,
-    TOE_WALKING_PRESETS, MATERIALS, PEDIATRIC_ANTHRO,
-    ICONS_DIR, THEMES_DIR,
+    APP_CLASSIFICATION,
+    APP_NAME,
+    APP_VERSION,
+    MATERIALS,
+    REGULATORY_BANNER,
+    TOE_WALKING_PRESETS,
 )
 
 logger = logging.getLogger("orthobraceforge.gui")

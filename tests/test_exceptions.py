@@ -1,20 +1,24 @@
 """
 Tests for the custom exception hierarchy and agent error translation.
 """
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
-from exceptions import (
-    OrthoError,
-    ComplianceError,
-    CADGenerationError,
-    PrinterConnectionError,
-    MeasurementValidationError,
-)
+import pytest
+
 from agents import (
-    BaseAgent, AgentResult,
-    Agentic3DAgent, FormaAIAgent, OctoMCPAgent,
-    OrthoInsolesAgent, ChatToSTLAgent, CADRenderAgent,
+    Agentic3DAgent,
+    AgentResult,
+    BaseAgent,
+    ChatToSTLAgent,
+    FormaAIAgent,
+    OctoMCPAgent,
+)
+from exceptions import (
+    CADGenerationError,
+    ComplianceError,
+    MeasurementValidationError,
+    OrthoError,
+    PrinterConnectionError,
 )
 
 
@@ -178,8 +182,9 @@ class TestAgentErrorTranslation:
 class TestPipelineExceptionHandling:
     def test_ortho_error_in_pipeline_produces_typed_message(self):
         """OrthoError should produce a message with the exception type name."""
-        from orchestration import OrchoBraceOrchestrator
         from unittest.mock import MagicMock
+
+        from orchestration import OrchoBraceOrchestrator
 
         orch = OrchoBraceOrchestrator.__new__(OrchoBraceOrchestrator)
         orch.db = MagicMock()

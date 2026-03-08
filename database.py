@@ -3,14 +3,14 @@ OrthoBraceForge — Database Layer
 Persistent SQLite for patient cases, design iterations, and audit trail.
 ISO 13485 §4.2.5 compliant record keeping.
 """
-import sqlite3
-import json
-import uuid
 import hashlib
+import sqlite3
+import uuid
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional, List, Dict, Any
-from dataclasses import dataclass, asdict
+from typing import Any, Dict, List, Optional
+
 from config import DB_PATH
 
 
