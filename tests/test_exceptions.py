@@ -133,7 +133,7 @@ class TestBaseAgentRun:
 # Agent error translation tests
 # ===========================================================================
 class TestAgentErrorTranslation:
-    @patch("agents.subprocess.run")
+    @patch("agents.agentic3d.subprocess.run")
     def test_agentic3d_handles_oserror_in_render(self, mock_run):
         """OSError in render should not crash agent, returns failure result."""
         mock_run.side_effect = OSError("disk full")
@@ -147,7 +147,7 @@ class TestAgentErrorTranslation:
         assert not result.success
         assert len(result.errors) > 0
 
-    @patch("agents.subprocess.run")
+    @patch("agents.forma_ai.subprocess.run")
     def test_forma_handles_subprocess_timeout(self, mock_run):
         """Timeout in build123d should return failure, not raise."""
         import subprocess
@@ -170,7 +170,7 @@ class TestAgentErrorTranslation:
     def test_chat_to_stl_handles_oserror(self):
         """OSError during file write returns failure result."""
         agent = ChatToSTLAgent()
-        with patch("agents.Path.write_text", side_effect=OSError("disk full")):
+        with patch("agents.chat_to_stl.Path.write_text", side_effect=OSError("disk full")):
             result = agent.execute({"constraints": {}})
         assert not result.success
         assert any("disk full" in e for e in result.errors)

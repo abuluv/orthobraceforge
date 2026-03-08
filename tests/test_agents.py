@@ -307,24 +307,24 @@ class TestAgentic3DAgent(unittest.TestCase):
         self.assertIn("my AFO desc", prompt)
         self.assertIn("hinged", prompt)
 
-    @patch("agents.subprocess.run")
-    @patch("agents.Path.write_text")
-    @patch("agents.Path.exists", return_value=True)
+    @patch("agents.agentic3d.subprocess.run")
+    @patch("agents.agentic3d.Path.write_text")
+    @patch("agents.agentic3d.Path.exists", return_value=True)
     def test_render_stl_success(self, mock_exists, mock_write, mock_run):
         mock_run.return_value = MagicMock(returncode=0, stderr="")
         ok = self.agent._render_stl("// code", "/tmp/t.scad", "/tmp/t.stl")
         self.assertTrue(ok)
         mock_run.assert_called_once()
 
-    @patch("agents.subprocess.run")
-    @patch("agents.Path.write_text")
+    @patch("agents.agentic3d.subprocess.run")
+    @patch("agents.agentic3d.Path.write_text")
     def test_render_stl_openscad_not_found(self, mock_write, mock_run):
         mock_run.side_effect = FileNotFoundError("openscad not found")
         ok = self.agent._render_stl("// code", "/tmp/t.scad", "/tmp/t.stl")
         self.assertFalse(ok)
 
-    @patch("agents.subprocess.run")
-    @patch("agents.Path.write_text")
+    @patch("agents.agentic3d.subprocess.run")
+    @patch("agents.agentic3d.Path.write_text")
     def test_render_stl_nonzero_returncode(self, mock_write, mock_run):
         mock_run.return_value = MagicMock(returncode=1, stderr="ERROR: something")
         ok = self.agent._render_stl("// code", "/tmp/t.scad", "/tmp/t.stl")
