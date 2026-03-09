@@ -163,6 +163,35 @@ class AuditPDFGenerator:
             story.append(Paragraph(
                 f"Reinforcement Needed: <b>{'YES' if needs_lattice else 'NO'}</b>", normal
             ))
+            if needs_lattice:
+                spec = lattice.get("lattice_specification", {})
+                if spec:
+                    lattice_data = []
+                    for label, key, unit in [
+                        ("Type:", "type", ""),
+                        ("Relative Density:", "relative_density", ""),
+                        ("Strut Diameter:", "strut_diameter_mm", " mm"),
+                        ("Cell Size:", "cell_size_mm", " mm"),
+                        ("Material:", "material", ""),
+                        ("Location:", "location", ""),
+                    ]:
+                        val = spec.get(key)
+                        if val is not None:
+                            lattice_data.append([label, f"{val}{unit}"])
+                    dims = spec.get("dimensions_mm")
+                    if dims and len(dims) == 3:
+                        lattice_data.append([
+                            "Dimensions:",
+                            f"{dims[0]} x {dims[1]} x {dims[2]} mm",
+                        ])
+                    if lattice_data:
+                        lat_table = Table(lattice_data, colWidths=[2.5*inch, 4*inch])
+                        lat_table.setStyle(TableStyle([
+                            ('FONTSIZE', (0, 0), (-1, -1), 9),
+                            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+                            ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+                        ]))
+                        story.append(lat_table)
 
             # Section 7: Human Review
             story.append(Paragraph("7. Human Review Gate", heading_style))
@@ -239,11 +268,28 @@ class AuditPDFGenerator:
             f"Engine: {state.get('cad_engine', 'N/A')}",
             f"Compliance: {'PASSED' if state.get('compliance_result', {}).get('passed') else 'FAILED'}",
             f"FEA: {'PASSED' if state.get('fea_result', {}).get('passed') else 'FAILED'}",
+        ]
+        lattice = state.get("lattice_evaluation", {})
+        needs_lattice = lattice.get("needs_reinforcement", False)
+        lines.append(f"Lattice Reinforcement: {'YES' if needs_lattice else 'NO'}")
+        if needs_lattice:
+            spec = lattice.get("lattice_specification", {})
+            if spec:
+                for label, key, unit in [
+                    ("  Type", "type", ""),
+                    ("  Material", "material", ""),
+                    ("  Strut Diameter", "strut_diameter_mm", " mm"),
+                    ("  Cell Size", "cell_size_mm", " mm"),
+                ]:
+                    val = spec.get(key)
+                    if val is not None:
+                        lines.append(f"{label}: {val}{unit}")
+        lines.extend([
             f"Human Approved: {state.get('human_approved', False)}",
             f"Reviewer: {state.get('human_reviewer', 'N/A')}",
             "",
             "--- Trace Log ---",
-        ]
+        ])
         lines.extend(state.get("trace_log", []))
         Path(txt_path).write_text("\n".join(lines), encoding="utf-8")
         return txt_path

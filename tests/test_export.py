@@ -359,3 +359,37 @@ class TestEdgeCases:
         result_path = gen._generate_text_report(patient_id, design_id, sample_state)
         content = Path(result_path).read_text(encoding="utf-8")
         assert "Engine: build123d" in content
+
+    def test_text_report_lattice_no_reinforcement(self, db, export_dir, patient_and_design, sample_state):
+        """Text report shows 'NO' when lattice reinforcement is not needed."""
+        patient_id, design_id = patient_and_design
+        gen = AuditPDFGenerator(db)
+
+        result_path = gen._generate_text_report(patient_id, design_id, sample_state)
+        content = Path(result_path).read_text(encoding="utf-8")
+        assert "Lattice Reinforcement: NO" in content
+
+    def test_text_report_lattice_with_reinforcement_details(self, db, export_dir, patient_and_design, sample_state):
+        """Text report includes lattice spec details when reinforcement is needed."""
+        patient_id, design_id = patient_and_design
+        sample_state["lattice_evaluation"] = {
+            "needs_reinforcement": True,
+            "lattice_specification": {
+                "type": "BCC",
+                "relative_density": 0.6,
+                "strut_diameter_mm": 0.5,
+                "cell_size_mm": 3.0,
+                "material": "Ti-6Al-4V",
+                "location": "posterior_wall_reinforcement_rib",
+                "dimensions_mm": [3.0, 15, 90.0],
+            },
+        }
+        gen = AuditPDFGenerator(db)
+
+        result_path = gen._generate_text_report(patient_id, design_id, sample_state)
+        content = Path(result_path).read_text(encoding="utf-8")
+        assert "Lattice Reinforcement: YES" in content
+        assert "Type: BCC" in content
+        assert "Material: Ti-6Al-4V" in content
+        assert "Strut Diameter: 0.5 mm" in content
+        assert "Cell Size: 3.0 mm" in content

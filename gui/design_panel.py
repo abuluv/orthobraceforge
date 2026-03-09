@@ -283,16 +283,61 @@ class ComplianceReportScreen(QWidget):
             html += f"<h2>FEA Analysis: <span class='{'pass' if fea_pass else 'fail'}'>"
             html += f"{'PASSED' if fea_pass else 'FAILED'}</span></h2>"
             html += "<table>"
-            for k, v in fea.items():
-                if k != "passed":
-                    html += f"<tr><td><b>{k}</b></td><td>{v}</td></tr>"
+
+            # Safety factor with color coding
+            sf = fea.get("safety_factor", 0)
+            req_sf = fea.get("required_safety_factor", 3.0)
+            sf_class = "pass" if sf >= req_sf else "fail"
+            html += (f"<tr><td><b>Safety Factor</b></td>"
+                     f"<td><span class='{sf_class}'><b>{sf}</b></span>"
+                     f" (required: {req_sf})</td></tr>")
+
+            fea_fields = [
+                ("Max Von Mises Stress", "max_von_mises_mpa", " MPa"),
+                ("% of Yield Strength", "von_mises_pct_yield", "%"),
+                ("Dynamic Load", "dynamic_load_n", " N"),
+                ("Material", "material", ""),
+                ("Analysis Method", "method", ""),
+            ]
+            for label, key, unit in fea_fields:
+                val = fea.get(key)
+                if val is not None:
+                    html += f"<tr><td><b>{label}</b></td><td>{val}{unit}</td></tr>"
+
+            if fea.get("note"):
+                html += (f"<tr><td><b>Note</b></td>"
+                         f"<td><i>{fea['note']}</i></td></tr>")
             html += "</table>"
 
         # Lattice
         lattice = state.get("lattice_evaluation", {})
         if lattice:
             needs = lattice.get("needs_reinforcement", False)
-            html += f"<h2>Lattice Reinforcement: {'NEEDED' if needs else 'Not Required'}</h2>"
+            html += f"<h2>Lattice Reinforcement: <span class='{'warn' if needs else 'pass'}'>"
+            html += f"{'NEEDED' if needs else 'Not Required'}</span></h2>"
+            if needs:
+                spec = lattice.get("lattice_specification", {})
+                if spec:
+                    html += "<table>"
+                    lattice_fields = [
+                        ("Type", "type"),
+                        ("Relative Density", "relative_density"),
+                        ("Strut Diameter", "strut_diameter_mm", " mm"),
+                        ("Cell Size", "cell_size_mm", " mm"),
+                        ("Material", "material"),
+                        ("Location", "location"),
+                    ]
+                    for item in lattice_fields:
+                        label, key = item[0], item[1]
+                        unit = item[2] if len(item) > 2 else ""
+                        val = spec.get(key)
+                        if val is not None:
+                            html += f"<tr><td><b>{label}</b></td><td>{val}{unit}</td></tr>"
+                    dims = spec.get("dimensions_mm")
+                    if dims and len(dims) == 3:
+                        html += (f"<tr><td><b>Dimensions</b></td>"
+                                 f"<td>{dims[0]} x {dims[1]} x {dims[2]} mm</td></tr>")
+                    html += "</table>"
 
         # Human review
         html += "<h2>Human Review</h2>"
